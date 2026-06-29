@@ -846,60 +846,150 @@
       );
     }
 
-    /* STACKED BAR (daily) */
+    /* STACKED BAR (daily) - polished version */
     function StackedDailyChart({ daily }) {
       const [tip, setTip] = useState(null);
       if (!daily || !daily.length) return <p style={{ fontSize: '.75rem', color: '#6B7280' }}>No daily trend data available.</p>;
 
       const products = [...new Set(daily.map(d => d.product))];
-      const days = [...new Set(daily.map(d => d.order_day))].sort((a, b) => a - b);
+      const days     = [...new Set(daily.map(d => d.order_day))].sort((a, b) => a - b);
 
       const byDay = {};
-      days.forEach(d => { byDay[d] = {}; products.forEach(p => { byDay[d][p] = 0 }); });
+      days.forEach(d => { byDay[d] = {}; products.forEach(p => { byDay[d][p] = 0; }); });
       daily.forEach(d => { if (byDay[d.order_day]) byDay[d.order_day][d.product] = (byDay[d.order_day][d.product] || 0) + d.revenue; });
 
-      const maxTotal = Math.max(...days.map(d => Object.values(byDay[d]).reduce((s, v) => s + v, 0)));
-      const W = 500, H = 110, padL = 10, padR = 10, padB = 22;
-      const bw = Math.floor((W - padL - padR - (days.length - 1) * 5) / days.length);
+      const totals    = days.map(d => Object.values(byDay[d]).reduce((s, v) => s + v, 0));
+      const maxTotal  = Math.max(...totals);
+      const W = 600, H = 140, padL = 8, padR = 8, padB = 26, padT = 10;
+      const innerH    = H - padT;
+      const gap       = 4;
+      const bw        = Math.max(4, Math.floor((W - padL - padR - (days.length - 1) * gap) / days.length));
+
+      /* Horizontal gridlines */
+      const gridLines = [0.25, 0.5, 0.75, 1].map(pct => ({
+        y:     padT + innerH - pct * innerH,
+        label: fmt(maxTotal * pct),
+      }));
+
+      /* Rounded-top path helper — only top corners rounded */
+      const roundedTopRect = (x, y, w, h, r) => {
+        if (h <= 0) return '';
+        const cr = Math.min(r, h / 2, w / 2);
+        return `M${x + cr},${y} h${w - 2*cr} a${cr},${cr} 0 0 1 ${cr},${cr} v${h - cr} h${-w} v${-(h - cr)} a${cr},${cr} 0 0 1 ${cr},${-cr}z`;
+      };
 
       return (
         <div style={{ position: 'relative', width: '100%' }}>
           <svg width="100%" viewBox={`0 0 ${W} ${H + padB}`} style={{ overflow: 'visible' }}>
+            <defs>
+              {/* Per-product vertical gradients */}
+              {products.map((p, i) => {
+                const base = COLORS[p] || '#999';
+                return (
+                  <linearGradient key={i} id={`sg_${i}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor={base} stopOpacity="1"   />
+                    <stop offset="100%" stopColor={base} stopOpacity="0.7" />
+                  </linearGradient>
+                );
+              })}
+              {/* Glow filter for hovered column */}
+              <filter id="col-glow" x="-30%" y="-10%" width="160%" height="120%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+
+            {/* Background chart area */}
+            <rect x={padL} y={padT} width={W - padL - padR} height={innerH}
+              fill="url(#chart-bg)" rx="8" opacity="0.35"
+              style={{ fill: 'rgba(99,102,241,0.04)' }}/>
+
+            {/* Gridlines */}
+            {gridLines.map((gl, i) => (
+              <g key={i}>
+                <line x1={padL} y1={gl.y} x2={W - padR} y2={gl.y}
+                  stroke="rgba(0,0,0,0.06)" strokeWidth="1" strokeDasharray="4,4"/>
+              </g>
+            ))}
+
+            {/* Bars */}
             {days.map((d, di) => {
-              let cy = H;
-              const x = padL + di * (bw + 5);
+              let cy = padT + innerH;
+              const x = padL + di * (bw + gap);
+              const isHovered = tip === di;
               return (
-                <g key={d} onMouseEnter={() => setTip(di)} onMouseLeave={() => setTip(null)} style={{ cursor: 'pointer' }}>
-                  {products.map(p => {
-                    const v = byDay[d][p] || 0;
-                    const bh = Math.max(0, (v / maxTotal) * (H - 10));
+                <g key={d}
+                  onMouseEnter={() => setTip(di)}
+                  onMouseLeave={() => setTip(null)}
+                  style={{ cursor: 'pointer' }}
+                  filter={isHovered ? 'url(#col-glow)' : 'none'}>
+                  {products.map((p, pi) => {
+                    const v  = byDay[d][p] || 0;
+                    const bh = Math.max(0, (v / maxTotal) * innerH);
                     cy -= bh;
+                    const isTop = pi === products.length - 1;
+                    const gradId = `sg_${pi}`;
                     return (
-                      <rect key={p} x={x} y={cy} width={bw} height={bh} fill={COLORS[p] || '#999'} rx="1.5" opacity={tip === di ? 1 : .78} style={{ transition: 'opacity .15s' }} />
+                      <path
+                        key={p}
+                        d={roundedTopRect(x, cy, bw, bh, isTop ? 4 : 0)}
+                        fill={isHovered ? (COLORS[p] || '#999') : `url(#${gradId})`}
+                        opacity={isHovered ? 1 : 0.82}
+                        style={{ transition: 'opacity .18s' }}
+                      />
                     );
                   })}
+                  {/* Hover highlight overlay */}
+                  {isHovered && (
+                    <rect x={x} y={padT} width={bw} height={innerH}
+                      fill="rgba(255,255,255,0.12)" rx="4"/>
+                  )}
+                  {/* X-axis labels — every other day */}
                   {d % 2 === 1 && (
-                    <text x={x + bw / 2} y={H + 14} textAnchor="middle" fontSize="7.5" fill="#9CA3AF" fontWeight="600">Jan {d}</text>
+                    <text x={x + bw / 2} y={H + padB - 4}
+                      textAnchor="middle" fontSize="7.5" fill={isHovered ? '#0F0F0F' : '#9CA3AF'} fontWeight={isHovered ? '800' : '600'}>
+                      Jan {d}
+                    </text>
                   )}
                 </g>
               );
             })}
+
+            {/* Baseline */}
+            <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH}
+              stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
           </svg>
+
+          {/* Tooltip */}
           {tip !== null && (
-            <div style={{ position: 'absolute', top: -4, left: '50%', transform: 'translateX(-50%) translateY(-100%)', background: 'rgba(15,15,15,0.95)', color: 'white', padding: '8px 12px', borderRadius: 10, fontSize: '.7rem', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, border: '1px solid rgba(255,255,255,0.18)', width: 180 }}>
-              <span style={{ fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 3, color: '#C8F135' }}>Jan {days[tip]} Daily Revenue</span>
+            <div style={{
+              position: 'absolute', top: -8, left: '50%',
+              transform: 'translateX(-50%) translateY(-100%)',
+              background: 'rgba(10,10,20,0.96)', color: 'white',
+              padding: '10px 14px', borderRadius: 12,
+              fontSize: '.72rem', lineHeight: 1.5,
+              boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+              pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 5,
+              zIndex: 100, border: '1px solid rgba(255,255,255,0.12)', minWidth: 175,
+            }}>
+              <div style={{ fontWeight: 800, fontSize: '.78rem', borderBottom: '1px solid rgba(255,255,255,0.14)', paddingBottom: 5, marginBottom: 1, color: '#C8F135', letterSpacing: '.03em' }}>
+                Jan {days[tip]}
+              </div>
               {products.map(p => {
                 const val = byDay[days[tip]][p] || 0;
                 return (
-                  <div key={p} style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-                    <span style={{ color: '#D1D5DB' }}>{p}</span>
+                  <div key={p} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: COLORS[p] || '#999', flexShrink: 0 }}/>
+                      <span style={{ color: '#D1D5DB' }}>{p}</span>
+                    </div>
                     <span style={{ fontWeight: 700 }}>{fmt(val)}</span>
                   </div>
                 );
               })}
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 3, fontWeight: 800, color: '#FFF' }}>
-                <span>Total:</span>
-                <span>{fmt(Object.values(byDay[days[tip]]).reduce((s, v) => s + v, 0))}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, borderTop: '1px solid rgba(255,255,255,0.14)', paddingTop: 5, marginTop: 1, fontWeight: 800, color: '#fff' }}>
+                <span>Total</span>
+                <span style={{ color: '#C8F135' }}>{fmt(Object.values(byDay[days[tip]]).reduce((s, v) => s + v, 0))}</span>
               </div>
             </div>
           )}
@@ -1210,7 +1300,7 @@
             <div style={{ display: 'flex', gap: 6 }}>
               <button id="share-link" className="icon-btn" style={{ padding: 7 }} title="Copy page link" aria-label="Copy Link"
                 onClick={() => {
-                  navigator.clipboard.writeText(window.location.href)
+                  navigator.clipboard.writeText('https://sic-hackathon.vercel.app/')
                     .then(() => showToast('Link copied to clipboard!'))
                     .catch(() => showToast('Copy failed — please copy the URL manually'));
                 }}>
@@ -1498,7 +1588,7 @@
             </button>
           </div>
           <h3 style={{ fontWeight: 800, fontSize: '.95rem', lineHeight: 1.3, marginBottom: 12 }}>Revenue Trends</h3>
-          <div style={{ background: 'linear-gradient(135deg,#667eea1a,#764ba228,#f093fb14)', borderRadius: 14, flex: 1, minHeight: 90, display: 'flex', alignItems: 'flex-end', padding: '12px 10px 4px', border: '1px solid rgba(102,126,234,.18)', marginBottom: 12, overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(170deg,rgba(99,102,241,.06) 0%,rgba(20,184,166,.04) 100%)', borderRadius: 16, minHeight: 170, padding: '14px 10px 6px', border: '1px solid rgba(99,102,241,.12)', marginBottom: 12, overflow: 'hidden' }}>
             <StackedDailyChart daily={daily} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
