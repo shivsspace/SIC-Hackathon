@@ -1,0 +1,6 @@
+product,total_revenue,total_qty,avg_unit_price,fraud_count,order_count
+Earbuds,19542664.02,537,41893.93,1,105
+Laptop,18196632.45,537,37803.93,0,116
+Phone,24940675.69,670,40010.81,3,128
+Tablet,20077044.23,607,38491.16,0,119
+Watch,23096294.15,592,43664.8,1,122

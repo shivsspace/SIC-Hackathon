@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SalesIQ - E-Commerce Sales Intelligence</title>
+  <meta name="description" content="SalesIQ: Real-time e-commerce sales intelligence. Product trends, fraud detection, regional revenue — powered by real ETL data." />
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load processed data as local script to bypass Chrome CORS policy under file:// protocol -->
+  <script src="dashboard_data.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { font-family: 'Inter', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: linear-gradient(135deg, #E8EAF0 0%, #F4F5F8 60%, #ECEEF3 100%); min-height: 100vh; color: #0F0F0F; }
+
+    .gc { background: rgba(255,255,255,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.65); box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04); border-radius: 20px; transition: transform .28s, box-shadow .28s; }
+    .gc:hover { transform: scale(1.015); box-shadow: 0 18px 50px rgba(0,0,0,0.13), 0 3px 12px rgba(0,0,0,0.06); }
+    .gc-no-hover { background: rgba(255,255,255,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.65); box-shadow: 0 8px 32px rgba(0,0,0,0.08); border-radius: 20px; }
+    .dc { background: linear-gradient(140deg,#1a1a2e,#16213e); border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 8px 32px rgba(0,0,0,0.22); border-radius: 20px; transition: transform .28s, box-shadow .28s; }
+    .dc:hover { transform: scale(1.015); box-shadow: 0 18px 50px rgba(0,0,0,0.32); }
+
+    .glass-nav { background: rgba(255,255,255,0.82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,0.72); box-shadow: 0 2px 18px rgba(0,0,0,0.07); position: sticky; top: 0; z-index: 50; }
+
+    .lime-btn { background: #C8F135; color: #0F0F0F; font-weight: 700; border-radius: 9999px; padding: 10px 22px; border: none; cursor: pointer; font-size: .85rem; transition: background .2s, transform .2s, box-shadow .2s; }
+    .lime-btn:hover { background: #B5E020; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,241,53,.45); }
+    .lime-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .ghost-btn { background: transparent; border: 1px solid rgba(0,0,0,0.14); border-radius: 9999px; padding: 8px 18px; cursor: pointer; font-size: .84rem; font-weight: 600; color: #6B7280; transition: all .2s; }
+    .ghost-btn:hover { border-color: rgba(0,0,0,.35); color: #0F0F0F; }
+    .ghost-btn.active { background: #0F0F0F; color: white; border-color: #0F0F0F; }
+
+    .search-pill { background: rgba(255,255,255,0.68); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.85); border-radius: 9999px; height: 44px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); display: flex; align-items: center; padding: 0 16px; gap: 10px; }
+    .search-pill input { background: transparent; border: none; outline: none; font-size: .87rem; color: #0F0F0F; width: 100%; }
+    .search-pill input::placeholder { color: #9CA3AF; }
+
+    .icon-btn { background: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.85); border-radius: 9999px; padding: 8px; cursor: pointer; transition: transform .2s, background .2s; display: flex; align-items: center; justify-content: center; }
+    .icon-btn:hover { transform: scale(1.12); background: rgba(255,255,255,0.95); }
+
+    .swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2.5px solid white; transition: transform .2s, box-shadow .2s; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+    .swatch:hover { transform: scale(1.22); }
+    .swatch.active { box-shadow: 0 0 0 3px white, 0 0 0 5.5px currentColor, 0 4px 10px rgba(0,0,0,.2); transform: scale(1.18); }
+
+    .pbar { height: 5px; border-radius: 9999px; background: rgba(0,0,0,.08); overflow: hidden; }
+    .pfill { height: 100%; border-radius: 9999px; transition: width .8s ease; }
+
+    /* Dropdown / select */
+    .filter-select { background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.85); border-radius: 9999px; padding: 7px 14px; font-size: .8rem; font-weight: 600; color: #0F0F0F; cursor: pointer; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,.06); transition: box-shadow .2s; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236B7280'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .filter-select:focus { box-shadow: 0 0 0 2px #C8F13588; }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .data-table th { background: rgba(0,0,0,.04); padding: 10px 12px; text-align: left; font-weight: 700; color: #6B7280; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid rgba(0,0,0,.07); cursor: pointer; user-select: none; }
+    .data-table th:hover { background: rgba(0,0,0,.07); }
+    .data-table td { padding: 9px 12px; border-bottom: 1px solid rgba(0,0,0,.04); color: #0F0F0F; }
+    .data-table tr:hover td { background: rgba(200,241,53,.06); }
+    .data-table tr.fraud-row td { background: rgba(239,68,68,.04); }
+
+    /* Tabs */
+    .tab-bar { display: flex; gap: 4px; padding: 4px; background: rgba(0,0,0,.05); border-radius: 12px; }
+    .tab-btn { padding: 7px 18px; border-radius: 9px; font-size: .8rem; font-weight: 600; border: none; cursor: pointer; transition: all .2s; background: transparent; color: #6B7280; }
+    .tab-btn.active { background: white; color: #0F0F0F; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+
+    /* SVG bar chart */
+    .bar-hover:hover { opacity: 1 !important; cursor: pointer; }
+
+    /* Notifications panel */
+    .notif-panel { position: fixed; top: 70px; right: 20px; width: 320px; max-height: 420px; overflow-y: auto; z-index: 100; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0F0F0F; color: white; padding: 12px 24px; border-radius: 9999px; font-size: .85rem; font-weight: 600; z-index: 200; animation: toast-in .3s ease; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+    @keyframes toast-in { from { opacity:0; transform: translateX(-50%) translateY(16px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+    /* Donut */
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .donut-svg { animation: float 4s ease-in-out infinite; filter: drop-shadow(0 12px 28px rgba(0,0,0,.15)); }
+
+    /* Badge */
+    .badge-popular { background: linear-gradient(135deg,#ff6b9d,#ff4757); color: white; font-size: .64rem; font-weight: 800; border-radius: 9999px; padding: 3px 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .badge-fraud { background: rgba(239,68,68,.15); color: #dc2626; font-size: .68rem; font-weight: 700; border-radius: 6px; padding: 2px 7px; }
+    .badge-ok { background: rgba(34,197,94,.15); color: #16a34a; font-size: .68rem; font-weight: 700; border-radius: 6px; padding: 2px 7px; }
+    .badge-warn { background: rgba(245,158,11,.15); color: #d97706; font-size: .68rem; font-weight: 700; border-radius: 6px; padding: 2px 7px; }
+
+    /* Modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); z-index: 300; display: flex; align-items: center; justify-content: center; }
+    .modal-box { background: white; border-radius: 20px; padding: 28px; max-width: 520px; width: 90%; box-shadow: 0 24px 80px rgba(0,0,0,.25); animation: modal-in .25s ease; }
+    @keyframes modal-in { from { opacity:0; transform:scale(.93); } to { opacity:1; transform:scale(1); } }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.13); border-radius: 3px; }
+
+    /* Ticker */
+    @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+    .ticker-track { display: flex; animation: ticker 28s linear infinite; white-space: nowrap; }
+    .ticker-wrap { overflow: hidden; border-top: 1px solid rgba(0,0,0,.06); border-bottom: 1px solid rgba(0,0,0,.06); background: rgba(255,255,255,.45); padding: 8px 0; }
+
+    /* Loading spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(200,241,53,.3); border-top-color: #C8F135; border-radius: 50%; animation: spin .8s linear infinite; }
+
+    .orb { border-radius: 50%; position: absolute; pointer-events: none; }
+
+    /* Arrow on hover */
+    .arw { display: inline-block; transition: transform .2s; }
+    .arw-btn:hover .arw { transform: rotate(45deg); }
+
+    /* Pagination */
+    .pg-btn { padding: 5px 11px; border-radius: 8px; border: 1px solid rgba(0,0,0,.1); cursor: pointer; font-size: .78rem; font-weight: 600; background: rgba(255,255,255,.7); transition: all .2s; }
+    .pg-btn:hover { background: #C8F135; border-color: #C8F135; }
+    .pg-btn.active { background: #0F0F0F; color: white; border-color: #0F0F0F; }
+    .pg-btn:disabled { opacity: .35; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+/*  CONSTANTS */
+const COLORS = {
+  Earbuds: '#3B82F6',
+  Laptop:  '#F97316',
+  Phone:   '#22C55E',
+  Tablet:  '#EF4444',
+  Watch:   '#14B8A6',
+};
+const REGION_COLORS = {
+  North:   '#3B82F6',
+  South:   '#F97316',
+  East:    '#22C55E',
+  West:    '#EF4444',
+  Other:   '#14B8A6',
+};
+const fmt = (n) => n >= 1e6
+  ? `₹${(n/1e6).toFixed(2)}M`
+  : n >= 1e3
+  ? `₹${(n/1e3).toFixed(1)}K`
+  : `₹${n.toFixed(0)}`;
+
+/* TOAST HOOK */
+function useToast() {
+  const [toast, setToast] = useState(null);
+  const show = useCallback((msg, dur=2400) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), dur);
+  }, []);
+  return { toast, show };
+}
+
+/* DONUT CHART (interactive) */
+function DonutChart({ products }) {
+  const [hovered, setHovered] = useState(null);
+  const cx=110, cy=110, R=82, r=52;
+  const total = products.reduce((s,p)=>s+p.total_revenue,0);
+  let cumAngle = -Math.PI/2;
+  const segs = products.map((p,i) => {
+    const angle = (p.total_revenue/total)*2*Math.PI;
+    const x1=cx+R*Math.cos(cumAngle), y1=cy+R*Math.sin(cumAngle);
+    const x2=cx+R*Math.cos(cumAngle+angle), y2=cy+R*Math.sin(cumAngle+angle);
+    const ix1=cx+r*Math.cos(cumAngle+angle), iy1=cy+r*Math.sin(cumAngle+angle);
+    const ix2=cx+r*Math.cos(cumAngle), iy2=cy+r*Math.sin(cumAngle);
+    const lg=angle>Math.PI?1:0;
+    const d=`M${x1},${y1} A${R},${R} 0 ${lg},1 ${x2},${y2} L${ix1},${iy1} A${r},${r} 0 ${lg},0 ${ix2},${iy2} Z`;
+    cumAngle+=angle;
+    return {...p, d, color: COLORS[p.product]||'#999'};
+  });
+  const active = hovered!==null ? segs[hovered] : null;
+
+  return (
+    <div style={{position:'relative',width:220,height:220,flexShrink:0}}>
+      <div className="orb" style={{width:18,height:18,background:'#C8F135',top:8,right:26,opacity:.75,boxShadow:'0 3px 10px rgba(200,241,53,.5)'}}/>
+      <div className="orb" style={{width:11,height:11,background:'#3B82F6',bottom:18,left:8,opacity:.65,boxShadow:'0 3px 10px rgba(59,130,246,.45)'}}/>
+      <div className="orb" style={{width:14,height:14,background:'#F97316',top:44,left:2,opacity:.55}}/>
+      <svg width="220" height="220" className="donut-svg">
+        <defs>
+          {segs.map((s,i)=>(
+            <radialGradient key={i} id={`dg${i}`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={s.color} stopOpacity="1"/>
+              <stop offset="100%" stopColor={s.color} stopOpacity=".72"/>
+            </radialGradient>
+          ))}
+        </defs>
+        {segs.map((s,i)=>(
+          <path key={i} d={s.d} fill={`url(#dg${i})`} stroke="white" strokeWidth="2.5"
+            onMouseEnter={()=>setHovered(i)} onMouseLeave={()=>setHovered(null)}
+            style={{cursor:'pointer',transform:hovered===i?'scale(1.05)':'scale(1)',transformOrigin:`${cx}px ${cy}px`,transition:'transform .2s',filter:hovered===i?`drop-shadow(0 4px 10px ${s.color}99)`:'none'}}/>
+        ))}
+        <circle cx={cx} cy={cy} r={r-3} fill="rgba(255,255,255,0.95)"/>
+        {active ? <>
+          <text x={cx} y={cy-12} textAnchor="middle" fontSize="10" fill="#6B7280" fontWeight="700">{active.product.toUpperCase()}</text>
+          <text x={cx} y={cy+5}  textAnchor="middle" fontSize="12" fill="#0F0F0F" fontWeight="900">{fmt(active.total_revenue)}</text>
+          <text x={cx} y={cy+20} textAnchor="middle" fontSize="9"  fill="#6B7280">{active.order_count} orders</text>
+        </> : <>
+          <text x={cx} y={cy-12} textAnchor="middle" fontSize="10" fill="#6B7280" fontWeight="600">TOTAL REV</text>
+          <text x={cx} y={cy+5}  textAnchor="middle" fontSize="12" fill="#0F0F0F" fontWeight="900">{fmt(products.reduce((s,p)=>s+p.total_revenue,0))}</text>
+          <text x={cx} y={cy+20} textAnchor="middle" fontSize="9"  fill="#6B7280">{products.reduce((s,p)=>s+p.order_count,0)} orders</text>
+        </>}
+      </svg>
+    </div>
+  );
+}
+
+/* MINI BAR CHART (SVG, inline) */
+function MiniBarChart({ data, xKey, yKey, color='#3B82F6', height=80 }) {
+  const [tip, setTip] = useState(null);
+  if (!data.length) return null;
+  const maxVal = Math.max(...data.map(d=>d[yKey]));
+  const W=280, H=height, pad=10;
+  const bw = Math.floor((W - pad*(data.length+1)) / data.length);
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{overflow:'visible'}}>
+      {data.map((d,i)=>{
+        const bh = Math.max(4, ((d[yKey]/maxVal)*(H-20)));
+        const x = pad + i*(bw+pad);
+        const y = H - bh;
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={bw} height={bh}
+              fill={color} rx="3" opacity={tip===i?1:.72}
+              className="bar-hover"
+              onMouseEnter={()=>setTip(i)} onMouseLeave={()=>setTip(null)}
+              style={{transition:'opacity .15s'}}/>
+            {tip===i && (
+              <text x={x+bw/2} y={y-4} textAnchor="middle" fontSize="8" fill="#0F0F0F" fontWeight="700">
+                {fmt(d[yKey])}
+              </text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* STACKED BAR (monthly) */
+/* STACKED BAR (daily) */
+function StackedDailyChart({ daily }) {
+  const [tip, setTip] = useState(null);
+  if (!daily || !daily.length) return <p style={{fontSize:'.75rem',color:'#6B7280'}}>No daily trend data available.</p>;
+
+  const products = [...new Set(daily.map(d=>d.product))];
+  const days     = [...new Set(daily.map(d=>d.order_day))].sort((a,b)=>a-b);
+  
+  const byDay  = {};
+  days.forEach(d => { byDay[d]={}; products.forEach(p=>{byDay[d][p]=0}); });
+  daily.forEach(d=>{ if(byDay[d.order_day]) byDay[d.order_day][d.product]=(byDay[d.order_day][d.product]||0)+d.revenue; });
+
+  const maxTotal = Math.max(...days.map(d=>Object.values(byDay[d]).reduce((s,v)=>s+v,0)));
+  const W=500, H=110, padL=10, padR=10, padB=22;
+  const bw = Math.floor((W-padL-padR-(days.length-1)*5)/days.length);
+
+  return (
+    <div style={{position:'relative', width:'100%'}}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H+padB}`} style={{overflow:'visible'}}>
+        {days.map((d,di)=>{
+          let cy=H;
+          const x=padL+di*(bw+5);
+          return (
+            <g key={d} onMouseEnter={()=>setTip(di)} onMouseLeave={()=>setTip(null)} style={{cursor:'pointer'}}>
+              {products.map(p=>{
+                const v=byDay[d][p]||0;
+                const bh=Math.max(0,(v/maxTotal)*(H-10));
+                cy-=bh;
+                return (
+                  <rect key={p} x={x} y={cy} width={bw} height={bh} fill={COLORS[p]||'#999'} rx="1.5" opacity={tip===di?1:.78} style={{transition:'opacity .15s'}}/>
+                );
+              })}
+              {d % 2 === 1 && (
+                <text x={x+bw/2} y={H+14} textAnchor="middle" fontSize="7.5" fill="#9CA3AF" fontWeight="600">Jan {d}</text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      {tip !== null && (
+        <div style={{position:'absolute',top:-4,left:'50%',transform:'translateX(-50%) translateY(-100%)',background:'rgba(15,15,15,0.95)',color:'white',padding:'8px 12px',borderRadius:10,fontSize:'.7rem',boxShadow:'0 4px 16px rgba(0,0,0,0.25)',pointerEvents:'none',display:'flex',flexDirection:'column',gap:4,zIndex:100,border:'1px solid rgba(255,255,255,0.18)',width:180}}>
+          <span style={{fontWeight:800,borderBottom:'1px solid rgba(255,255,255,0.2)',paddingBottom:3,color:'#C8F135'}}>Jan {days[tip]} Daily Revenue</span>
+          {products.map(p=>{
+            const val = byDay[days[tip]][p]||0;
+            return (
+              <div key={p} style={{display:'flex',justifyContent:'space-between',gap:16}}>
+                <span style={{color:'#D1D5DB'}}>{p}</span>
+                <span style={{fontWeight:700}}>{fmt(val)}</span>
+              </div>
+            );
+          })}
+          <div style={{display:'flex',justifyContent:'space-between',gap:16,borderTop:'1px solid rgba(255,255,255,0.2)',paddingTop:3,fontWeight:800,color:'#FFF'}}>
+            <span>Total:</span>
+            <span>{fmt(Object.values(byDay[days[tip]]).reduce((s,v)=>s+v,0))}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* INTERACTIVE REGIONAL BOXPLOT AND FRAUD OVERLAY */
+function RegionalBoxPlot({ orders }) {
+  const [hoveredDot, setHoveredDot] = useState(null);
+  
+  const regions = [...new Set(orders.map(o=>o.region))].sort();
+  const regionStats = regions.map(r => {
+    const revs = orders.filter(o=>o.region===r).map(o=>o.revenue).sort((a,b)=>a-b);
+    const n = revs.length;
+    const min = revs[0] || 0;
+    const max = revs[n-1] || 0;
+    const q1 = revs[Math.floor(n * 0.25)] || 0;
+    const median = revs[Math.floor(n * 0.5)] || 0;
+    const q3 = revs[Math.floor(n * 0.75)] || 0;
+    const regionOrders = orders.filter(o=>o.region===r);
+    const fraudOrders = regionOrders.filter(o=>o.is_fraud);
+    return { region: r, min, max, q1, median, q3, total: regionOrders.length, fraud: fraudOrders };
+  });
+
+  const maxRevenueOverall = Math.max(...orders.map(o=>o.revenue));
+  const W = 600, H = 150, padL = 50, padR = 20, padT = 15, padB = 25;
+  const rowH = (H - padT - padB) / regions.length;
+
+  const getX = val => padL + ((val / maxRevenueOverall) * (W - padL - padR));
+  const getY = idx => padT + idx * rowH + rowH / 2;
+
+  const colorPalette = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444"];
+
+  return (
+    <div style={{position:'relative', width:'100%'}}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{overflow:'visible', background:'rgba(255,255,255,0.4)', borderRadius:12, padding:10}}>
+        {regionStats.map((stat, i) => {
+          const y = getY(i);
+          const c = colorPalette[i % colorPalette.length];
+          return (
+            <g key={stat.region}>
+              <text x={5} y={y + 3} fontSize="9" fontWeight="700" fill="#4B5563">{stat.region}</text>
+              <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="rgba(0,0,0,0.06)" strokeDasharray="3,3"/>
+              <rect x={getX(stat.q1)} y={y - 6} width={Math.max(4, getX(stat.q3) - getX(stat.q1))} height={12} fill={c} opacity="0.32" stroke={c} strokeWidth="1" rx="1.5"/>
+              <line x1={getX(stat.median)} y1={y - 6} x2={getX(stat.median)} y2={y + 6} stroke={c} strokeWidth="2.5"/>
+              <line x1={getX(stat.min)} y1={y} x2={getX(stat.q1)} y2={y} stroke={c} strokeWidth="0.8"/>
+              <line x1={getX(stat.q3)} y1={y} x2={getX(stat.max)} y2={y} stroke={c} strokeWidth="0.8"/>
+              <line x1={getX(stat.min)} y1={y - 4} x2={getX(stat.min)} y2={y + 4} stroke={c} strokeWidth="1"/>
+              <line x1={getX(stat.max)} y1={y - 4} x2={getX(stat.max)} y2={y + 4} stroke={c} strokeWidth="1"/>
+            </g>
+          );
+        })}
+
+        {Array.from({length:6}).map((_, i) => {
+          const val = (maxRevenueOverall / 5) * i;
+          const x = getX(val);
+          return (
+            <g key={i}>
+              <line x1={x} y1={H - padB} x2={x} y2={H - padB + 3} stroke="#9CA3AF"/>
+              <text x={x} y={H - padB + 12} textAnchor="middle" fontSize="7.5" fill="#6B7280" fontWeight="600">₹{(val/1000).toFixed(0)}K</text>
+            </g>
+          );
+        })}
+        <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="#D1D5DB"/>
+
+        {regionStats.map((stat, i) => {
+          const y = getY(i);
+          return stat.fraud.map((fo) => {
+            const x = getX(fo.revenue);
+            const isHovered = hoveredDot && hoveredDot.order_id === fo.order_id;
+            return (
+              <g key={fo.order_id} style={{cursor:'pointer'}}
+                onMouseEnter={()=>setHoveredDot({...fo, x, y})}
+                onMouseLeave={()=>setHoveredDot(null)}>
+                <path d={`M ${x-4} ${y-4} L ${x+4} ${y+4} M ${x+4} ${y-4} L ${x-4} ${y+4}`} stroke="#EF4444" strokeWidth={isHovered?2.5:1.8}/>
+                {isHovered && <circle cx={x} cy={y} r="7" fill="none" stroke="#EF4444" strokeWidth="1" opacity="0.6"/>}
+              </g>
+            );
+          });
+        })}
+      </svg>
+
+      {hoveredDot && (
+        <div style={{position:'absolute', top:-60, left:hoveredDot.x - 70, background:'rgba(239,68,68,0.96)', color:'white', padding:'8px 12px', borderRadius:8, fontSize:'.68rem', boxShadow:'0 4px 14px rgba(239,68,68,0.3)', pointerEvents:'none', display:'flex', flexDirection:'column', gap:3, zIndex:100, border:'1px solid rgba(255,255,255,0.2)', width:160}}>
+          <span style={{fontWeight:800, borderBottom:'1px solid rgba(255,255,255,0.3)', paddingBottom:3, textTransform:'uppercase'}}>Fraud Order</span>
+          <span>ID: {hoveredDot.order_id}</span>
+          <span>Product: {hoveredDot.product}</span>
+          <span>Revenue: {fmt(hoveredDot.revenue)}</span>
+          <span>Date: {hoveredDot.order_date}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* HEATMAP (product × hour-bin) */
+function HeatmapGrid({ heatmap }) {
+  const [tip, setTip] = useState(null);
+  const products  = [...new Set(heatmap.map(d=>d.product))].sort();
+  const hourBins  = [...new Set(heatmap.map(d=>d.hour_bin))].sort();
+  const lookup    = {};
+  heatmap.forEach(d => { lookup[`${d.product}||${d.hour_bin}`] = d.revenue; });
+  const allVals   = heatmap.map(d=>d.revenue);
+  const minVal    = Math.min(...allVals), maxVal=Math.max(...allVals);
+  const intensity = v => Math.round(((v-minVal)/(maxVal-minVal))*255);
+
+  return (
+    <div style={{overflowX:'auto'}}>
+      <table style={{borderCollapse:'separate',borderSpacing:4,fontSize:'.7rem'}}>
+        <thead>
+          <tr>
+            <th style={{color:'#6B7280',fontWeight:700,textAlign:'left',padding:'0 6px'}}>Product ↓ / Hour →</th>
+            {hourBins.map(h=><th key={h} style={{color:'#6B7280',fontWeight:700,padding:'0 8px',textAlign:'center'}}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {products.map(p=>(
+            <tr key={p}>
+              <td style={{fontWeight:700,fontSize:'.75rem',color:'#0F0F0F',padding:'2px 6px',whiteSpace:'nowrap'}}>{p}</td>
+              {hourBins.map(h=>{
+                const v=lookup[`${p}||${h}`]||0;
+                const it=intensity(v);
+                const bg=`rgba(59,130,246,${0.12+0.68*(it/255)})`;
+                const textCol=it>160?'white':'#0F0F0F';
+                const key=`${p}||${h}`;
+                return (
+                  <td key={h}
+                    onMouseEnter={()=>setTip(key)} onMouseLeave={()=>setTip(null)}
+                    style={{background:bg,borderRadius:8,padding:'7px 10px',textAlign:'center',color:textCol,fontWeight:tip===key?900:700,cursor:'pointer',transition:'all .15s',fontSize:'.72rem',minWidth:70}}>
+                    {tip===key?fmt(v):`₹${(v/1e3).toFixed(0)}K`}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* NAVBAR */
+function Navbar({ searchQ, setSearchQ, showNotif, setShowNotif, fraudCount, showToast }) {
+  return (
+    <nav className="glass-nav">
+      <div style={{maxWidth:1280,margin:'0 auto',display:'flex',alignItems:'center',gap:14,padding:'10px 24px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:9,marginRight:6,flexShrink:0}}>
+          <div style={{width:34,height:34,borderRadius:11,background:'linear-gradient(135deg,#C8F135,#a0c922)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(200,241,53,.4)'}}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="8" height="8" rx="2" fill="#0F0F0F" opacity=".85"/>
+              <rect x="13" y="3" width="8" height="8" rx="2" fill="#0F0F0F" opacity=".4"/>
+              <rect x="3" y="13" width="8" height="8" rx="2" fill="#0F0F0F" opacity=".4"/>
+              <rect x="13" y="13" width="8" height="8" rx="2" fill="#0F0F0F" opacity=".85"/>
+            </svg>
+          </div>
+          <span style={{fontSize:'1.18rem',fontWeight:900,letterSpacing:'-0.04em'}}>SalesIQ</span>
+        </div>
+
+        <div style={{flex:1,maxWidth:440}}>
+          <div className="search-pill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input id="nav-search" type="text" placeholder="Search orders, products, regions…" value={searchQ} onChange={e=>setSearchQ(e.target.value)}/>
+            {searchQ && <button onClick={()=>setSearchQ('')} style={{background:'none',border:'none',cursor:'pointer',color:'#9CA3AF',fontSize:'1.1rem',lineHeight:1}}>×</button>}
+          </div>
+        </div>
+        <div style={{flex:1}}/>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <button className="icon-btn" id="btn-favourites" aria-label="Favourites" onClick={()=>showToast('Added to favourites!')}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <button className="icon-btn" id="btn-cart" aria-label="Cart" onClick={()=>showToast('View shopping cart!')}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          </button>
+          <button className="icon-btn" id="btn-alerts" aria-label="Alerts" style={{position:'relative'}}
+            onClick={()=>setShowNotif(s=>!s)}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={showNotif?"#EF4444":"#6B7280"} strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            {fraudCount>0 && <span style={{position:'absolute',top:5,right:5,width:7,height:7,background:'#EF4444',borderRadius:'50%',border:'1.5px solid white'}}/>}
+          </button>
+          <div id="user-avatar" style={{width:38,height:38,borderRadius:'50%',background:'linear-gradient(135deg,#667eea,#764ba2)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',border:'2.5px solid white',boxShadow:'0 3px 10px rgba(102,126,234,.35)',fontSize:'.82rem',fontWeight:800,color:'white',flexShrink:0}} onClick={()=>showToast('Opening user profile...')}>SK</div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+/* FILTER BAR */
+function FilterBar({ products, regions, filters, setFilters, onReset, showToast }) {
+  return (
+    <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',padding:'14px 20px',background:'rgba(255,255,255,.5)',borderRadius:14,border:'1px solid rgba(255,255,255,.8)',marginBottom:16}}>
+      <span style={{fontWeight:700,fontSize:'.8rem',color:'#6B7280',flexShrink:0}}>Filters:</span>
+
+      <select className="filter-select" id="filter-product" value={filters.product} onChange={e=>setFilters(f=>({...f,product:e.target.value}))}>
+        <option value="">All Products</option>
+        {products.map(p=><option key={p} value={p}>{p}</option>)}
+      </select>
+
+      <select className="filter-select" id="filter-region" value={filters.region} onChange={e=>setFilters(f=>({...f,region:e.target.value}))}>
+        <option value="">All Regions</option>
+        {regions.map(r=><option key={r} value={r}>{r}</option>)}
+      </select>
+
+      <select className="filter-select" id="filter-fraud" value={filters.fraud} onChange={e=>setFilters(f=>({...f,fraud:e.target.value}))}>
+        <option value="">All Orders</option>
+        <option value="fraud">Fraud Only</option>
+        <option value="clean">Clean Only</option>
+      </select>
+
+      <select className="filter-select" id="filter-month" value={filters.month} onChange={e=>setFilters(f=>({...f,month:e.target.value}))}>
+        <option value="">All Months</option>
+        {[1,2,3,4,5,6,7,8,9,10,11,12].map(m=><option key={m} value={m}>Month {m}</option>)}
+      </select>
+
+      <select className="filter-select" id="filter-sort" value={filters.sort} onChange={e=>setFilters(f=>({...f,sort:e.target.value}))}>
+        <option value="revenue_desc">Revenue ↓</option>
+        <option value="revenue_asc">Revenue ↑</option>
+        <option value="date_desc">Latest First</option>
+        <option value="date_asc">Oldest First</option>
+        <option value="qty_desc">Qty ↓</option>
+      </select>
+
+      <button className="lime-btn" id="btn-apply-filter" style={{padding:'7px 16px',fontSize:'.78rem'}}
+        onClick={()=>showToast('Filters applied successfully!')}>Apply</button>
+      <button className="ghost-btn" id="btn-reset-filter" onClick={onReset}>Reset</button>
+
+      <span style={{marginLeft:'auto',fontSize:'.75rem',color:'#6B7280',fontWeight:600}}>
+        {filters.product||filters.region||filters.fraud||filters.month ? 'Active filters' : ''}
+      </span>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HERO CARD
+═══════════════════════════════════════════════════════════════════ */
+function HeroCard({ meta, products, showToast }) {
+  return (
+    <div className="gc" style={{padding:'28px 30px',display:'flex',flexDirection:'column',gap:20,gridColumn:'span 2'}}>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16}}>
+        <div style={{flex:1,display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:7,background:'rgba(0,0,0,.055)',borderRadius:9999,padding:'5px 14px',width:'fit-content'}}>
+            <span style={{fontSize:'.68rem',fontWeight:700,color:'#6B7280',letterSpacing:'.06em',textTransform:'uppercase'}}>Live Dashboard</span>
+          </div>
+          <h1 style={{fontSize:'clamp(1.6rem,2.8vw,2.4rem)',fontWeight:900,lineHeight:1.08,letterSpacing:'-0.045em'}}>
+            Sales Intelligence.<br/>
+            <span style={{background:'linear-gradient(135deg,#3B82F6 30%,#14B8A6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Powered by Data.</span>
+          </h1>
+          <div style={{display:'flex',alignItems:'flex-start',gap:16}}>
+            <span style={{fontSize:'3.6rem',fontWeight:900,color:'rgba(0,0,0,.055)',lineHeight:1,letterSpacing:'-0.07em',userSelect:'none',flexShrink:0}}>01</span>
+            <div style={{width:1,height:62,background:'rgba(0,0,0,.11)',flexShrink:0,marginTop:6}}/>
+            <div>
+              <p style={{fontWeight:700,fontSize:'.88rem',marginBottom:5}}>Real-time Insights</p>
+              <p style={{color:'#6B7280',fontSize:'.79rem',lineHeight:1.55}}>
+                <b style={{color:'#0F0F0F'}}>{meta.total_orders}</b> orders processed · <b style={{color:'#0F0F0F'}}>{fmt(meta.total_revenue)}</b> total revenue<br/>
+                <b style={{color:'#EF4444'}}>{meta.total_fraud} fraud alerts</b> · {meta.products.length} product categories · {meta.regions.length} regions
+              </p>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <button className="lime-btn" id="btn-view-reports" onClick={()=>showToast('📊 Scrolling to full reports…')}>
+              View All Reports <span className="arw">↗</span>
+            </button>
+            <button className="ghost-btn" id="btn-explore" onClick={()=>showToast('🔍 Explore mode active')}>Explore Trends</button>
+          </div>
+        </div>
+        <DonutChart products={products}/>
+      </div>
+      {/* Bottom legend */}
+      <div style={{paddingTop:16,borderTop:'1px solid rgba(0,0,0,.07)',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+        <div style={{display:'flex',gap:18,flexWrap:'wrap'}}>
+          {products.map((p,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:6}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:COLORS[p.product]||'#999',boxShadow:`0 0 7px ${COLORS[p.product]||'#999'}99`}}/>
+              <span style={{fontSize:'.77rem',fontWeight:700}}>{p.product}</span>
+              <span style={{fontSize:'.72rem',color:'#6B7280'}}>{fmt(p.total_revenue)}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:6}}>
+          {['tw','ig','li'].map(s=>(
+            <button key={s} id={`social-${s}`} className="icon-btn" style={{padding:7}} onClick={()=>showToast('🔗 Link copied!')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SIDEBAR CARD STACK
+═══════════════════════════════════════════════════════════════════ */
+function SidebarCardStack({ regions, products, fraudOrders, showToast, setActiveTab }) {
+  const [selReg, setSelReg] = useState(0);
+  const best = products.reduce((a,b)=>a.total_revenue>b.total_revenue?a:b, products[0]||{});
+  const active = regions[selReg];
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      {/* Card A — Top Regions */}
+      <div className="gc" style={{padding:'18px 20px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <span style={{fontWeight:700,fontSize:'.88rem'}}>Top Regions</span>
+          <span style={{fontSize:'.68rem',color:'#6B7280',background:'rgba(0,0,0,.05)',borderRadius:9999,padding:'2px 9px'}}>Revenue</span>
+        </div>
+        <div style={{display:'flex',gap:8,marginBottom:12}}>
+          {regions.map((r,i)=>(
+            <button key={i} id={`swatch-${r.region?.toLowerCase()}`}
+              className={`swatch${selReg===i?' active':''}`}
+              style={{background:REGION_COLORS[r.region]||'#999',color:REGION_COLORS[r.region]||'#999'}}
+              title={r.region} onClick={()=>setSelReg(i)}/>
+          ))}
+        </div>
+        {active && (
+          <div style={{background:`${REGION_COLORS[active.region]||'#999'}13`,borderRadius:13,padding:'11px 13px',border:`1px solid ${REGION_COLORS[active.region]||'#999'}33`,marginBottom:10}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:7}}>
+              <span style={{fontWeight:700,fontSize:'.83rem'}}>{active.region}</span>
+              <span style={{fontWeight:900,color:REGION_COLORS[active.region],fontSize:'.9rem'}}>{fmt(active.total_revenue)}</span>
+            </div>
+            <div className="pbar">
+              <div className="pfill" style={{width:`${Math.round((active.total_revenue/regions.reduce((s,r)=>s+r.total_revenue,0))*100)}%`,background:REGION_COLORS[active.region]||'#999'}}/>
+            </div>
+            <span style={{fontSize:'.68rem',color:'#6B7280',marginTop:5,display:'block'}}>{active.order_count} orders · {active.fraud_count} fraud</span>
+          </div>
+        )}
+        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+          {regions.map((r,i)=>(
+            <div key={i} onClick={()=>setSelReg(i)}
+              style={{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',opacity:selReg===i?1:.5,transition:'opacity .2s'}}>
+              <div style={{display:'flex',alignItems:'center',gap:7}}>
+                <div style={{width:6,height:6,borderRadius:'50%',background:REGION_COLORS[r.region]||'#999'}}/>
+                <span style={{fontSize:'.74rem',fontWeight:600}}>{r.region}</span>
+              </div>
+              <span style={{fontSize:'.73rem',color:'#6B7280'}}>{fmt(r.total_revenue)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Card B — Best Product */}
+      <div className="gc" style={{padding:'18px 20px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <span style={{fontWeight:700,fontSize:'.88rem'}}>Best Product</span>
+          <button id="btn-best-product" className="arw-btn" style={{background:'transparent',border:'none',cursor:'pointer',color:'#3B82F6',fontWeight:700,fontSize:'.85rem'}}
+            onClick={()=>showToast(`Best Product: ${best.product} - ${fmt(best.total_revenue)}`)}>
+            <span className="arw">↗</span>
+          </button>
+        </div>
+        <div style={{background:`${COLORS[best.product]||'#999'}14`,borderRadius:13,height:56,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12,border:`1px solid ${COLORS[best.product]||'#999'}22`}}>
+          <div style={{width:32,height:32,borderRadius:'50%',background:`linear-gradient(135deg,${COLORS[best.product]||'#999'},${COLORS[best.product]||'#999'}bb)`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 4px 14px ${COLORS[best.product]||'#999'}55`}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          </div>
+        </div>
+        <p style={{fontWeight:800,fontSize:'1.02rem',marginBottom:2}}>{best.product}</p>
+        <p style={{color:COLORS[best.product],fontWeight:700,fontSize:'.85rem',marginBottom:2}}>{fmt(best.total_revenue)} revenue</p>
+        <p style={{color:'#6B7280',fontSize:'.73rem'}}>{best.order_count} orders · {best.fraud_count} fraud detected</p>
+      </div>
+
+      {/* Card C — Fraud Alerts */}
+      <div className="dc" style={{padding:'18px 20px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <span style={{fontWeight:700,fontSize:'.88rem',color:'white'}}>Fraud Alerts</span>
+          <button id="btn-fraud-link" className="arw-btn" style={{background:'transparent',border:'none',cursor:'pointer',color:'#EF4444',fontWeight:700,fontSize:'.85rem'}}
+            onClick={()=>{showToast('Viewing fraud orders...'); setActiveTab('fraud');}}>
+            <span className="arw">↗</span>
+          </button>
+        </div>
+        <div style={{background:'rgba(239,68,68,.13)',borderRadius:12,padding:'13px',marginBottom:12,border:'1px solid rgba(239,68,68,.28)',display:'flex',alignItems:'center',gap:11}}>
+          <div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#EF4444,#dc2626)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 4px 14px rgba(239,68,68,.4)'}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <p style={{color:'#EF4444',fontWeight:800,fontSize:'.83rem',marginBottom:2}}>{fraudOrders.length} flagged orders</p>
+            <p style={{color:'rgba(255,255,255,.5)',fontSize:'.7rem'}}>Click ↗ to review in detail</p>
+          </div>
+        </div>
+        {fraudOrders.map((f,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+            <div style={{display:'flex',alignItems:'center',gap:7}}>
+              <div style={{width:5,height:5,borderRadius:'50%',background:'#EF4444'}}/>
+              <span style={{color:'rgba(255,255,255,.65)',fontSize:'.74rem'}}>{f.order_id}</span>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end'}}>
+              <span style={{color:'#EF4444',fontWeight:700,fontSize:'.74rem'}}>{fmt(f.revenue)}</span>
+              <span style={{color:'rgba(255,255,255,.4)',fontSize:'.65rem'}}>{f.product}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SUMMARY CARD
+═══════════════════════════════════════════════════════════════════ */
+function SummaryCard({ products, meta }) {
+  const maxRev = Math.max(...products.map(p=>p.total_revenue));
+  return (
+    <div className="gc" style={{padding:'20px 22px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+        <span style={{fontWeight:700,fontSize:'.9rem'}}>Product Summary</span>
+        <button id="btn-summary-heart" style={{background:'transparent',border:'none',cursor:'pointer'}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.2">
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/>
+          </svg>
+        </button>
+      </div>
+      <p style={{color:'#6B7280',fontSize:'.74rem',marginBottom:14}}><b style={{color:'#0F0F0F'}}>{meta.total_orders}</b> clean records · {products.length} categories</p>
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        {products.map((p,i)=>(
+          <div key={i} title={`${p.product}: ${fmt(p.total_revenue)}`}
+            style={{flex:1,height:50,borderRadius:11,background:`linear-gradient(135deg,${COLORS[p.product]||'#999'}22,${COLORS[p.product]||'#999'}44)`,border:`1px solid ${COLORS[p.product]||'#999'}33`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'transform .2s'}}
+            onMouseEnter={e=>e.currentTarget.style.transform='scale(1.1)'}
+            onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+            <span style={{fontSize:'.6rem',fontWeight:800,color:COLORS[p.product]||'#999'}}>{p.product.slice(0,3).toUpperCase()}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {products.map((p,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',gap:9}}>
+            <span style={{width:46,fontSize:'.7rem',color:'#6B7280',fontWeight:600,flexShrink:0}}>{p.product}</span>
+            <div className="pbar" style={{flex:1}}>
+              <div className="pfill" style={{width:`${(p.total_revenue/maxRev)*100}%`,background:COLORS[p.product]||'#999'}}/>
+            </div>
+            <span style={{width:42,fontSize:'.7rem',fontWeight:700,flexShrink:0,textAlign:'right'}}>{fmt(p.total_revenue)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATS CARD
+═══════════════════════════════════════════════════════════════════ */
+function StatsCard({ meta }) {
+  const avatars=[
+    {initials:'AK',bg:'linear-gradient(135deg,#667eea,#764ba2)'},
+    {initials:'PM',bg:'linear-gradient(135deg,#f093fb,#f5576c)'},
+    {initials:'RJ',bg:'linear-gradient(135deg,#4facfe,#00f2fe)'},
+  ];
+  return (
+    <div className="gc" style={{padding:'20px 22px',display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+      <div>
+        <div style={{display:'flex',alignItems:'center',marginBottom:16}}>
+          {avatars.map((a,i)=>(
+            <div key={i} style={{width:40,height:40,borderRadius:'50%',background:a.bg,border:'2.5px solid white',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:'.78rem',color:'white',marginLeft:i>0?-12:0,zIndex:avatars.length-i}}>{a.initials}</div>
+          ))}
+          <div style={{marginLeft:9,background:'rgba(0,0,0,.055)',borderRadius:9999,padding:'3px 11px'}}>
+            <span style={{fontSize:'.69rem',color:'#6B7280',fontWeight:600}}>+{meta.total_orders-3} more</span>
+          </div>
+        </div>
+        <p style={{fontSize:'3rem',fontWeight:900,lineHeight:1,marginBottom:4,letterSpacing:'-0.055em'}}>{meta.total_orders}<span style={{color:'#C8F135'}}>+</span></p>
+        <p style={{color:'#6B7280',fontSize:'.8rem',marginBottom:16,fontWeight:500}}>Orders Processed Successfully</p>
+        <div style={{display:'flex',gap:8}}>
+          {[
+            {label:'Revenue',val:fmt(meta.total_revenue),color:'#3B82F6'},
+            {label:'Fraud',val:`${meta.total_fraud} flagged`,color:'#EF4444'},
+            {label:'SKUs',val:`${meta.products.length} products`,color:'#22C55E'},
+          ].map((s,i)=>(
+            <div key={i} style={{flex:1,background:`${s.color}0f`,borderRadius:11,padding:'9px 10px',border:`1px solid ${s.color}22`}}>
+              <p style={{fontSize:'.68rem',color:'#6B7280',marginBottom:3}}>{s.label}</p>
+              <p style={{fontSize:'.76rem',fontWeight:700,color:s.color}}>{s.val}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:5,marginTop:16,paddingTop:14,borderTop:'1px solid rgba(0,0,0,.06)'}}>
+        <span style={{color:'#FFB000',fontWeight:700,fontSize:'.85rem'}}>Rating: </span><b style={{fontSize:'.85rem'}}>4.8 / 5</b>
+        <span style={{color:'#6B7280',fontSize:'.75rem'}}>· {meta.total_orders} verified</span>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FEATURED CARD
+═══════════════════════════════════════════════════════════════════ */
+function FeaturedCard({ products, daily, showToast, setActiveTab }) {
+  return (
+    <div className="gc" style={{padding:'20px 22px',display:'flex',flexDirection:'column'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+        <span className="badge-popular">Popular</span>
+        <button id="btn-featured-link" className="arw-btn" style={{background:'transparent',border:'none',cursor:'pointer',color:'#6B7280',fontWeight:700,fontSize:'.85rem'}} onClick={()=>showToast('Revenue trends loaded')}>
+          <span className="arw">↗</span>
+        </button>
+      </div>
+      <h3 style={{fontWeight:800,fontSize:'.95rem',lineHeight:1.3,marginBottom:12}}>Revenue Trends</h3>
+      <div style={{background:'linear-gradient(135deg,#667eea1a,#764ba228,#f093fb14)',borderRadius:14,flex:1,minHeight:90,display:'flex',alignItems:'flex-end',padding:'12px 10px 4px',border:'1px solid rgba(102,126,234,.18)',marginBottom:12,overflow:'hidden'}}>
+        <StackedDailyChart daily={daily}/>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
+        {products.slice(0,3).map((p,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div style={{display:'flex',alignItems:'center',gap:7}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:COLORS[p.product]||'#999'}}/>
+              <span style={{fontSize:'.72rem',color:'#6B7280'}}>{p.product}</span>
+            </div>
+            <span style={{fontSize:'.72rem',fontWeight:700}}>{fmt(p.total_revenue)}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:12,borderTop:'1px solid rgba(0,0,0,.06)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{color:'#FFB000',fontWeight:700,fontSize:'.82rem'}}>Rating: </span><b style={{fontSize:'.82rem'}}>4.7</b>
+          <span style={{color:'#6B7280',fontSize:'.72rem'}}>score</span>
+        </div>
+        <button className="lime-btn" id="btn-featured-cta" style={{padding:'6px 16px',fontSize:'.75rem'}} onClick={()=>{showToast('Navigating to detailed Analytics...'); setActiveTab('analytics');}}>Deep Dive ↗</button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   AI INSIGHT GENERATOR CARD
+ ═══════════════════════════════════════════════════════════════════ */
+function AIInsightGenerator({ insights, recommendations }) {
+  return (
+    <div className="gc" style={{padding:'20px 22px', display:'flex', flexDirection:'column', gap:18}}>
+      <div style={{display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid rgba(0,0,0,.06)', paddingBottom:12}}>
+        <div style={{width:8, height:8, borderRadius:'50%', background:'linear-gradient(135deg,#3B82F6,#10B981)', animation:'pulse 2s infinite'}}/>
+        <span style={{fontWeight:800, fontSize:'.9rem', textTransform:'uppercase', letterSpacing:'.06em', background:'linear-gradient(135deg,#3B82F6,#10B981)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent'}}>AI Insight Generator</span>
+      </div>
+
+      <div style={{display:'flex', flexDirection:'column', gap:14}}>
+        <div>
+          <h4 style={{fontWeight:700, fontSize:'.82rem', color:'#4B5563', marginBottom:8, textTransform:'uppercase', letterSpacing:'.04em'}}>Business Insights</h4>
+          <ul style={{listStyleType:'none', paddingLeft:0, display:'flex', flexDirection:'column', gap:6}}>
+            {insights.map((ins, i)=>(
+              <li key={i} style={{fontSize:'.76rem', color:'#111827', display:'flex', alignItems:'flex-start', gap:8}}>
+                <span style={{color:'#3B82F6', fontWeight:900}}>•</span>
+                <span>{ins}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div style={{borderTop:'1px solid rgba(0,0,0,.04)', paddingTop:12}}>
+          <h4 style={{fontWeight:700, fontSize:'.82rem', color:'#4B5563', marginBottom:8, textTransform:'uppercase', letterSpacing:'.04em'}}>Recommendations</h4>
+          <ul style={{listStyleType:'none', paddingLeft:0, display:'flex', flexDirection:'column', gap:6}}>
+            {recommendations.map((rec, i)=>(
+              <li key={i} style={{fontSize:'.76rem', color:'#111827', display:'flex', alignItems:'flex-start', gap:8}}>
+                <span style={{color:'#10B981', fontWeight:900}}>•</span>
+                <span>{rec}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INVENTORY PRIORITY CARD
+═══════════════════════════════════════════════════════════════════ */
+function InventoryCard({ inventory }) {
+  const maxScore = Math.max(...inventory.map(i=>i.restock_score));
+  return (
+    <div className="gc" style={{padding:'22px 24px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
+        <div>
+          <span style={{fontWeight:700,fontSize:'.95rem'}}>Inventory Restocking Priority</span>
+          <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:3}}>Min-heap priority queue · lower score = restock first</p>
+        </div>
+        <span style={{background:'rgba(200,241,53,.22)',borderRadius:9999,padding:'5px 14px',fontSize:'.74rem',fontWeight:800,color:'#5a6e00'}}>Auto-ranked</span>
+      </div>
+      <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+        {inventory.map((item,i)=>{
+          const c=COLORS[item.product]||'#3B82F6';
+          const pct=(item.restock_score/maxScore)*100;
+          return (
+            <div key={i} style={{flex:1,minWidth:130,background:i===0?'rgba(200,241,53,.11)':'rgba(0,0,0,.028)',borderRadius:15,padding:'15px 14px',border:i===0?'1px solid rgba(200,241,53,.42)':'1px solid rgba(0,0,0,.07)',position:'relative'}}>
+              {i===0&&<div style={{position:'absolute',top:9,right:9,background:'#C8F135',borderRadius:9999,padding:'2px 9px',fontSize:'.6rem',fontWeight:900}}>URGENT</div>}
+              <div style={{fontWeight:700,color:'#9CA3AF',fontSize:'.68rem',marginBottom:4}}>#{item.rank}</div>
+              <div style={{fontWeight:800,fontSize:'.9rem',marginBottom:3}}>{item.product}</div>
+              <div style={{color:'#6B7280',fontSize:'.7rem',marginBottom:11}}>score: {item.restock_score.toFixed(6)}</div>
+              <div className="pbar"><div className="pfill" style={{width:`${pct}%`,background:c}}/></div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   REGIONAL MAP CARD
+═══════════════════════════════════════════════════════════════════ */
+function RegionalMapCard({ regions }) {
+  const total = regions.reduce((s,r)=>s+r.total_revenue,0);
+  return (
+    <div className="gc" style={{padding:'22px 24px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
+        <div>
+          <span style={{fontWeight:700,fontSize:'.95rem'}}>Regional Revenue Map</span>
+          <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:3}}>Interactive Folium map · click to explore</p>
+        </div>
+        <a href="regional_sales_map.html" target="_blank" id="btn-open-map"
+          style={{background:'#C8F135',color:'#0F0F0F',fontWeight:700,borderRadius:9999,padding:'9px 20px',textDecoration:'none',fontSize:'.8rem',transition:'all .2s',display:'inline-flex',alignItems:'center',gap:5}}
+          onMouseEnter={e=>{e.currentTarget.style.background='#B5E020';e.currentTarget.style.transform='translateY(-2px)';}}
+          onMouseLeave={e=>{e.currentTarget.style.background='#C8F135';e.currentTarget.style.transform='translateY(0)';}}>
+          Open Map ↗
+        </a>
+      </div>
+      <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+        {regions.map((r,i)=>{
+          const c=REGION_COLORS[r.region]||'#999';
+          const pct=Math.round((r.total_revenue/total)*100);
+          return (
+            <div key={i} style={{flex:1,minWidth:130,background:`${c}0e`,borderRadius:15,padding:'17px 15px',border:`1px solid ${c}30`}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                <div style={{width:10,height:10,borderRadius:'50%',background:c,boxShadow:`0 0 9px ${c}99`}}/>
+                <span style={{fontWeight:700,fontSize:'.85rem'}}>{r.region}</span>
+              </div>
+              <p style={{fontWeight:900,color:c,fontSize:'1.25rem',marginBottom:2,letterSpacing:'-0.03em'}}>{fmt(r.total_revenue)}</p>
+              <div className="pbar" style={{marginTop:9}}><div className="pfill" style={{width:`${pct}%`,background:c}}/></div>
+              <p style={{color:'#6B7280',fontSize:'.71rem',marginTop:5}}>{pct}% · {r.order_count} orders · {r.fraud_count} fraud</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ORDERS TABLE (filterable, sortable, paginated)
+═══════════════════════════════════════════════════════════════════ */
+function OrdersTable({ orders, filters }) {
+  const [sortCol, setSortCol] = useState('revenue');
+  const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage]       = useState(1);
+  const PAGE_SIZE = 15;
+
+  const filtered = useMemo(()=>{
+    let rows = [...orders];
+    if (filters.product) rows=rows.filter(o=>o.product===filters.product);
+    if (filters.region)  rows=rows.filter(o=>o.region===filters.region);
+    if (filters.fraud==='fraud') rows=rows.filter(o=>o.is_fraud);
+    if (filters.fraud==='clean') rows=rows.filter(o=>!o.is_fraud);
+    if (filters.month)   rows=rows.filter(o=>o.order_month===Number(filters.month));
+    if (filters.sort) {
+      const [col,dir]=filters.sort.split('_');
+      const colMap={revenue:'revenue',date:'order_month',qty:'qty'};
+      const c=colMap[col]||'revenue';
+      rows.sort((a,b)=>dir==='desc'?b[c]-a[c]:a[c]-b[c]);
+    }
+    // secondary sort
+    rows.sort((a,b)=>{
+      let va=a[sortCol], vb=b[sortCol];
+      if (typeof va==='string') { va=va.toLowerCase(); vb=vb.toLowerCase(); }
+      if (va<vb) return sortDir==='asc'?-1:1;
+      if (va>vb) return sortDir==='asc'?1:-1;
+      return 0;
+    });
+    return rows;
+  }, [orders,filters,sortCol,sortDir]);
+
+  const totalPages = Math.ceil(filtered.length/PAGE_SIZE);
+  const pageRows   = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+  const toggleSort = (col) => {
+    if (sortCol===col) setSortDir(d=>d==='asc'?'desc':'asc');
+    else { setSortCol(col); setSortDir('desc'); }
+    setPage(1);
+  };
+  const sortIcon=(col)=> sortCol===col ? (sortDir==='asc'?' ↑':' ↓') : ' ↕';
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+        <span style={{fontWeight:700,fontSize:'.9rem'}}>{filtered.length} orders</span>
+        <div style={{display:'flex',gap:6}}>
+          <button className="pg-btn" disabled={page===1} onClick={()=>setPage(p=>p-1)}>← Prev</button>
+          {Array.from({length:Math.min(5,totalPages)},(_,i)=>{
+            const p=Math.max(1,Math.min(page-2,totalPages-4))+i;
+            return <button key={p} className={`pg-btn${page===p?' active':''}`} onClick={()=>setPage(p)}>{p}</button>;
+          })}
+          <button className="pg-btn" disabled={page===totalPages||totalPages===0} onClick={()=>setPage(p=>p+1)}>Next →</button>
+        </div>
+      </div>
+      <div style={{overflowX:'auto',borderRadius:12,border:'1px solid rgba(0,0,0,.06)'}}>
+        <table className="data-table">
+          <thead>
+            <tr>
+              {[['order_id','Order ID'],['product','Product'],['region','Region'],['qty','Qty'],['unit_price','Unit Price'],['discount','Disc%'],['revenue','Revenue'],['is_fraud','Status']].map(([col,label])=>(
+                <th key={col} onClick={()=>toggleSort(col)}>{label}{sortIcon(col)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {pageRows.map((o,i)=>(
+              <tr key={i} className={o.is_fraud?'fraud-row':''}>
+                <td style={{fontFamily:'monospace',fontSize:'.72rem'}}>{o.order_id}</td>
+                <td><div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:7,height:7,borderRadius:'50%',background:COLORS[o.product]||'#999'}}/>{o.product}</div></td>
+                <td>{o.region}</td>
+                <td style={{textAlign:'right'}}>{o.qty}</td>
+                <td style={{textAlign:'right'}}>₹{o.unit_price?.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+                <td style={{textAlign:'right'}}>{o.discount}%</td>
+                <td style={{textAlign:'right',fontWeight:700}}>{fmt(o.revenue)}</td>
+                <td><span className={o.is_fraud?'badge-fraud':'badge-ok'}>{o.is_fraud?'Fraud':'Clean'}</span></td>
+              </tr>
+            ))}
+            {pageRows.length===0&&<tr><td colSpan="8" style={{textAlign:'center',color:'#9CA3AF',padding:'24px'}}>No orders match the current filters.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FRAUD TABLE
+═══════════════════════════════════════════════════════════════════ */
+function FraudTable({ fraudOrders }) {
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+        <div style={{width:10,height:10,borderRadius:'50%',background:'#EF4444',boxShadow:'0 0 10px rgba(239,68,68,.6)',animation:'pulse 1.5s infinite'}}/>
+        <span style={{fontWeight:700,fontSize:'.9rem',color:'#dc2626'}}>{fraudOrders.length} Flagged Orders — Immediate Review Required</span>
+      </div>
+      <div style={{overflowX:'auto',borderRadius:12,border:'1px solid rgba(239,68,68,.15)'}}>
+        <table className="data-table">
+          <thead>
+            <tr style={{background:'rgba(239,68,68,.06)'}}>
+              <th>Order ID</th><th>Product</th><th>Region</th><th>Revenue</th><th>Date/Time</th><th>Risk Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fraudOrders.map((f,i)=>(
+              <tr key={i} style={{background:'rgba(239,68,68,.03)'}}>
+                <td style={{fontFamily:'monospace',fontSize:'.72rem',color:'#dc2626',fontWeight:700}}>{f.order_id}</td>
+                <td><div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:7,height:7,borderRadius:'50%',background:COLORS[f.product]||'#999'}}/>{f.product}</div></td>
+                <td>{f.region}</td>
+                <td style={{fontWeight:700,color:'#dc2626'}}>{fmt(f.revenue)}</td>
+                <td style={{fontSize:'.72rem',color:'#6B7280'}}>{f.order_date}</td>
+                <td><span className="badge-fraud">HIGH RISK</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANALYTICS TAB
+═══════════════════════════════════════════════════════════════════ */
+function AnalyticsTab({ products, regions, daily, heatmap, orders }) {
+  const [subTab, setSubTab] = useState('interactive');
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:20}}>
+      {/* View Toggle */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(255,255,255,.5)',borderRadius:14,padding:'8px 16px',border:'1px solid rgba(255,255,255,.8)'}}>
+        <span style={{fontWeight:800,fontSize:'.85rem',color:'#4B5563'}}>Executive Dashboard Views</span>
+        <div style={{display:'flex',gap:8}}>
+          <button className={`ghost-btn${subTab==='interactive'?' active':''}`} style={{fontSize:'.75rem',padding:'5px 12px'}} onClick={()=>setSubTab('interactive')}>Interactive Charts</button>
+          <button className={`ghost-btn${subTab==='static'?' active':''}`} style={{fontSize:'.75rem',padding:'5px 12px'}} onClick={()=>setSubTab('static')}>Matplotlib Static (PNG)</button>
+        </div>
+      </div>
+
+      {subTab === 'interactive' ? (
+        <div style={{display:'flex',flexDirection:'column',gap:20}}>
+          {/* Panel 1: Stacked Daily Chart */}
+          <div className="gc-no-hover" style={{padding:'22px 24px'}}>
+            <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
+              <div>
+                <span style={{fontWeight:700,fontSize:'.95rem'}}>Daily Revenue Trends (Product Stacked)</span>
+                <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:2}}>Interactive timeline — hover columns to view daily values</p>
+              </div>
+              <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                {products.map((p,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:6}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:COLORS[p.product]||'#999'}}/>
+                    <span style={{fontSize:'.7rem',color:'#6B7280',fontWeight:600}}>{p.product}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <StackedDailyChart daily={daily}/>
+          </div>
+
+          {/* Panel 2: Interactive Regional Box Plot & Fraud Overlay */}
+          <div className="gc-no-hover" style={{padding:'22px 24px'}}>
+            <div style={{marginBottom:14}}>
+              <span style={{fontWeight:700,fontSize:'.95rem'}}>Regional Revenue Distribution & Fraud Overlay</span>
+              <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:2}}>Boxes display Median and Interquartile ranges (IQR) · Hover red crosses to view fraud order details</p>
+            </div>
+            <RegionalBoxPlot orders={orders}/>
+          </div>
+
+          {/* Panel 3: Heatmap */}
+          <div className="gc-no-hover" style={{padding:'22px 24px'}}>
+            <div style={{marginBottom:14}}>
+              <span style={{fontWeight:700,fontSize:'.95rem'}}>Avg Revenue Heatmap: Product × Hour-Bin</span>
+              <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:2}}>Hover blocks to see absolute revenue values</p>
+            </div>
+            <HeatmapGrid heatmap={heatmap}/>
+          </div>
+        </div>
+      ) : (
+        <div className="gc-no-hover" style={{padding:'22px 24px',textAlign:'center'}}>
+          <div style={{marginBottom:14,textAlign:'left'}}>
+            <span style={{fontWeight:700,fontSize:'.95rem'}}>Matplotlib Static Dashboard Output</span>
+            <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:2}}>Rendered static image of sales_dashboard.png generated by solution.py</p>
+          </div>
+          <div style={{overflow:'hidden',borderRadius:12,border:'1px solid rgba(0,0,0,.08)'}}>
+            <img src="sales_dashboard.png" alt="Sales Dashboard Matplotlib Plot" style={{width:'100%',height:'auto',display:'block'}}/>
+          </div>
+        </div>
+      )}
+
+      {/* Region breakdown list always visible at the bottom of Analytics */}
+      <div className="gc-no-hover" style={{padding:'22px 24px'}}>
+        <div style={{marginBottom:14}}>
+          <span style={{fontWeight:700,fontSize:'.95rem'}}>Regional Revenue Summary</span>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {[...regions].sort((a,b)=>b.total_revenue-a.total_revenue).map((r,i)=>{
+            const c=REGION_COLORS[r.region]||'#999';
+            const maxR=Math.max(...regions.map(x=>x.total_revenue));
+            return (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:12}}>
+                <span style={{width:64,fontSize:'.78rem',fontWeight:600,color:'#0F0F0F',flexShrink:0}}>{r.region}</span>
+                <div className="pbar" style={{flex:1,height:14,borderRadius:7}}>
+                  <div className="pfill" style={{width:`${(r.total_revenue/maxR)*100}%`,background:c,height:14,borderRadius:7}}/>
+                </div>
+                <span style={{width:60,fontSize:'.78rem',fontWeight:700,flexShrink:0,textAlign:'right',color:c}}>{fmt(r.total_revenue)}</span>
+                <span style={{width:40,fontSize:'.72rem',color:'#6B7280',flexShrink:0}}>{r.order_count} ord</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   NOTIFICATION PANEL
+═══════════════════════════════════════════════════════════════════ */
+function NotifPanel({ fraudOrders, onClose }) {
+  return (
+    <div className="notif-panel gc-no-hover" style={{padding:16}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+        <span style={{fontWeight:700,fontSize:'.85rem'}}>Notifications</span>
+        <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:'1.1rem',color:'#6B7280'}}>×</button>
+      </div>
+      {fraudOrders.map((f,i)=>(
+        <div key={i} style={{display:'flex',gap:10,padding:'10px 12px',background:'rgba(239,68,68,.06)',borderRadius:11,marginBottom:6,border:'1px solid rgba(239,68,68,.15)'}}>
+          <span style={{fontSize:'.8rem',fontWeight:700,color:'#dc2626'}}>[Alert]</span>
+          <div>
+            <p style={{fontWeight:700,fontSize:'.78rem',color:'#dc2626'}}>{f.order_id} — Fraud Detected</p>
+            <p style={{fontSize:'.72rem',color:'#6B7280'}}>{f.product} · {fmt(f.revenue)} · {f.region}</p>
+          </div>
+        </div>
+      ))}
+      <div style={{padding:'10px 12px',background:'rgba(200,241,53,.1)',borderRadius:11,border:'1px solid rgba(200,241,53,.35)'}}>
+        <p style={{fontWeight:700,fontSize:'.78rem',color:'#5a6e00'}}>ETL Pipeline Complete</p>
+        <p style={{fontSize:'.72rem',color:'#6B7280'}}>590 clean orders · dashboard_data.json synced</p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TICKER
+═══════════════════════════════════════════════════════════════════ */
+function Ticker({ products, meta }) {
+  const items=[
+    ...products.map(p=>`${p.product} · ${fmt(p.total_revenue)} · ${p.order_count} orders · ${p.fraud_count} fraud`),
+    `Total Revenue: ${fmt(meta.total_revenue)}`,
+    `${meta.total_orders} Orders Processed`,
+    `${meta.total_fraud} Fraud Alerts Detected`,
+    `${meta.regions.length} Regions Mapped`,
+  ];
+  return (
+    <div className="ticker-wrap">
+      <div className="ticker-track">
+        {[0,1].map(k=>(
+          <span key={k} style={{display:'inline-block',paddingRight:'4rem',fontSize:'.75rem',color:'#6B7280',fontWeight:600}}>
+            {items.join('   ·   ')}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MAIN APP
+═══════════════════════════════════════════════════════════════════ */
+function App() {
+  const [data,    setData]      = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error,   setError]     = useState(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchQ, setSearchQ]   = useState('');
+  const [showNotif, setShowNotif] = useState(false);
+  const [filters, setFilters]   = useState({product:'',region:'',fraud:'',month:'',sort:'revenue_desc'});
+  const { toast, show: showToast } = useToast();
+
+  // Load data
+  useEffect(()=>{
+    if (window.DASHBOARD_DATA) {
+      setData(window.DASHBOARD_DATA);
+      setLoading(false);
+      return;
+    }
+    fetch('dashboard_data.json')
+      .then(r=>{ if(!r.ok) throw new Error('dashboard_data.json not found. Please run solution.py first.'); return r.json(); })
+      .then(d=>{ setData(d); setLoading(false); })
+      .catch(e=>{ setError(e.message); setLoading(false); });
+  },[]);
+
+  const resetFilters = useCallback(()=>{
+    setFilters({product:'',region:'',fraud:'',month:'',sort:'revenue_desc'});
+    showToast('Filters reset');
+  },[showToast]);
+
+  // Search filter over orders
+  const visibleOrders = useMemo(()=>{
+    if (!data) return [];
+    if (!searchQ) return data.orders;
+    const q=searchQ.toLowerCase();
+    return data.orders.filter(o=>
+      o.order_id?.toLowerCase().includes(q)||
+      o.product?.toLowerCase().includes(q)||
+      o.region?.toLowerCase().includes(q)
+    );
+  },[data,searchQ]);
+
+  if (loading) return (
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+      <div className="spinner"/>
+      <p style={{color:'#6B7280',fontWeight:600}}>Loading dashboard_data.json…</p>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,padding:24}}>
+      <div style={{fontSize:'3rem'}}>⚠</div>
+      <p style={{fontWeight:700,fontSize:'1.1rem',color:'#dc2626'}}>Data Load Error</p>
+      <p style={{color:'#6B7280',maxWidth:460,textAlign:'center',lineHeight:1.6}}>{error}</p>
+      <code style={{background:'rgba(0,0,0,.06)',borderRadius:10,padding:'10px 18px',fontSize:'.82rem'}}>
+        python solution.py
+      </code>
+      <button className="lime-btn" onClick={()=>window.location.reload()}>Retry</button>
+    </div>
+  );
+
+  const { meta, product_summary, region_summary, monthly_revenue, daily_revenue, heatmap, fraud_orders, inventory_priority, ai_insights, orders } = data;
+  const fraudCount = fraud_orders.length;
+
+  const TABS = [
+    {id:'dashboard', label:'Dashboard'},
+    {id:'analytics', label:'Analytics'},
+    {id:'orders',    label:`Orders (${meta.total_orders})`},
+    {id:'fraud',     label:`Fraud (${fraudCount})`},
+  ];
+
+  return (
+    <div style={{minHeight:'100vh'}}>
+      <Navbar searchQ={searchQ} setSearchQ={setSearchQ} showNotif={showNotif} setShowNotif={setShowNotif} fraudCount={fraudCount} showToast={showToast}/>
+      {showNotif && <NotifPanel fraudOrders={fraud_orders} onClose={()=>setShowNotif(false)}/>}
+      <Ticker products={product_summary} meta={meta}/>
+
+      <main style={{maxWidth:1280,margin:'0 auto',padding:'20px 20px 44px'}}>
+        {/* Tab Bar */}
+        <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:18}}>
+          <div className="tab-bar">
+            {TABS.map(t=>(
+              <button key={t.id} id={`tab-${t.id}`} className={`tab-btn${activeTab===t.id?' active':''}`}
+                onClick={()=>setActiveTab(t.id)}>{t.label}</button>
+            ))}
+          </div>
+          {searchQ && <span style={{fontSize:'.78rem',color:'#6B7280',fontStyle:'italic'}}>Searching: "{searchQ}"</span>}
+        </div>
+
+        {/* DASHBOARD TAB */}
+        {activeTab==='dashboard' && (
+          <>
+            {/* Two-Column Flex Layout to eliminate empty vertical gaps between cards */}
+            <div style={{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap'}}>
+              {/* Left Column - Main Content (spans wider) */}
+              <div style={{flex:'1 1 650px',display:'flex',flexDirection:'column',gap:16}}>
+                <HeroCard meta={meta} products={product_summary} showToast={showToast}/>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+                  <SummaryCard products={product_summary} meta={meta}/>
+                  <StatsCard meta={meta}/>
+                </div>
+                <FeaturedCard products={product_summary} daily={daily_revenue} showToast={showToast} setActiveTab={setActiveTab}/>
+              </div>
+
+              {/* Right Column - Sidebar Content (takes fixed width on desktop) */}
+              <div style={{width:330,flexShrink:0,display:'flex',flexDirection:'column',gap:16}}>
+                <SidebarCardStack regions={region_summary} products={product_summary} fraudOrders={fraud_orders} showToast={showToast} setActiveTab={setActiveTab}/>
+                {ai_insights && <AIInsightGenerator insights={ai_insights.insights} recommendations={ai_insights.recommendations}/>}
+              </div>
+            </div>
+
+            {/* Bottom Full-Width Cards */}
+            <div style={{marginBottom:16}}><InventoryCard inventory={inventory_priority}/></div>
+            <div><RegionalMapCard regions={region_summary}/></div>
+          </>
+        )}
+
+        {/* ANALYTICS TAB */}
+        {activeTab==='analytics' && (
+          <AnalyticsTab products={product_summary} regions={region_summary} daily={daily_revenue} heatmap={heatmap} orders={orders}/>
+        )}
+
+        {/* ORDERS TAB */}
+        {activeTab==='orders' && (
+          <div className="gc-no-hover" style={{padding:'22px 24px'}}>
+            <div style={{marginBottom:16}}>
+              <span style={{fontWeight:700,fontSize:'.95rem'}}>All Orders</span>
+              <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:2}}>590 clean records from ETL pipeline · filterable & sortable</p>
+            </div>
+            <FilterBar products={meta.products} regions={meta.regions} filters={filters} setFilters={setFilters} onReset={resetFilters} showToast={showToast}/>
+            <OrdersTable orders={searchQ ? visibleOrders : data.orders} filters={filters}/>
+          </div>
+        )}
+
+        {/* FRAUD TAB */}
+        {activeTab==='fraud' && (
+          <div className="gc-no-hover" style={{padding:'22px 24px',border:'1px solid rgba(239,68,68,.15)'}}>
+            <div style={{marginBottom:16}}>
+              <span style={{fontWeight:700,fontSize:'.95rem',color:'#dc2626'}}>Fraud Detection Report</span>
+              <p style={{color:'#6B7280',fontSize:'.73rem',marginTop:2}}>Orders with revenue &gt; mean + 3σ threshold · from ETL pipeline</p>
+            </div>
+            <FraudTable fraudOrders={fraud_orders}/>
+            <div style={{marginTop:24,display:'flex',gap:12,flexWrap:'wrap'}}>
+              {product_summary.map((p,i)=>(
+                <div key={i} style={{flex:1,minWidth:130,background:p.fraud_count>0?'rgba(239,68,68,.07)':'rgba(34,197,94,.07)',borderRadius:12,padding:'12px 14px',border:p.fraud_count>0?'1px solid rgba(239,68,68,.2)':'1px solid rgba(34,197,94,.2)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:COLORS[p.product]||'#999'}}/>
+                    <span style={{fontWeight:700,fontSize:'.82rem'}}>{p.product}</span>
+                  </div>
+                  <p style={{fontWeight:900,fontSize:'1.4rem',color:p.fraud_count>0?'#dc2626':'#16a34a',marginBottom:2}}>{p.fraud_count}</p>
+                  <p style={{fontSize:'.7rem',color:'#6B7280'}}>fraud orders</p>
+                  <span className={p.fraud_count>0?'badge-fraud':'badge-ok'} style={{marginTop:8,display:'inline-block'}}>{p.fraud_count>0?`${p.fraud_count} FRAUD`:'CLEAN'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer style={{textAlign:'center',padding:'18px',color:'#9CA3AF',fontSize:'.73rem',borderTop:'1px solid rgba(0,0,0,.06)',background:'rgba(255,255,255,.4)'}}>
+        <b style={{color:'#0F0F0F'}}>SalesIQ</b> · E-Commerce Sales Intelligence ·
+        {meta.total_orders} orders · {fmt(meta.total_revenue)} revenue · {meta.total_fraud} fraud · {meta.regions.length} regions · {meta.products.length} products
+      </footer>
+
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
