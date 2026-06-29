@@ -1,21 +1,13 @@
-"""
-SalesIQ FastAPI Backend
-=======================
-Run:  uvicorn api:app --reload
-Docs: http://127.0.0.1:8000/docs
-"""
-
 from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from src.pipeline.config import DASHBOARD_JSON_FILENAME
 
-#  Load data once at startup 
-DATA_FILE = Path(__file__).parent / "dashboard_data.json"
+# Load data once at startup
+DATA_FILE = Path(DASHBOARD_JSON_FILENAME)
 
 def _load() -> dict:
     if not DATA_FILE.exists():
@@ -25,7 +17,6 @@ def _load() -> dict:
 
 DATA: dict[str, Any] = _load()
 
-#  App 
 app = FastAPI(
     title="SalesIQ — E-Commerce Sales Intelligence API",
     description=(
@@ -49,14 +40,14 @@ def _require(key: str) -> Any:
     if not DATA:
         raise HTTPException(
             status_code=503,
-            detail="dashboard_data.json not found — run solution.py first.",
+            detail="dashboard_data.json not found — run run_pipeline.py first.",
         )
     if key not in DATA:
         raise HTTPException(status_code=404, detail=f"Key '{key}' not in data.")
     return DATA[key]
 
 
-# ── Health ────────────────────────────────────────────────────────────────────
+# -- Health --
 @app.get("/", tags=["Health"])
 def root():
     """Ping endpoint — verifies the server is reachable."""
@@ -78,28 +69,28 @@ def health():
     }
 
 
-# ── Meta ──────────────────────────────────────────────────────────────────────
+# -- Meta --
 @app.get("/meta", tags=["Overview"])
 def get_meta():
     """High-level summary: total orders, revenue, fraud count, products & regions."""
     return _require("meta")
 
 
-# ── Products ──────────────────────────────────────────────────────────────────
+# -- Products --
 @app.get("/products", tags=["Products"])
 def get_products():
     """Per-product revenue, order count, fraud count, and average unit price."""
     return _require("product_summary")
 
 
-# ── Regions ───────────────────────────────────────────────────────────────────
+# -- Regions --
 @app.get("/regions", tags=["Regions"])
 def get_regions():
     """Per-region total revenue, order count, and fraud count."""
     return _require("region_summary")
 
 
-# ── Revenue ───────────────────────────────────────────────────────────────────
+# -- Revenue --
 @app.get("/revenue/monthly", tags=["Revenue"])
 def get_monthly_revenue():
     """Monthly revenue grouped by product."""
@@ -112,13 +103,11 @@ def get_daily_revenue():
     return _require("daily_revenue")
 
 
-# ── Orders ────────────────────────────────────────────────────────────────────
+# -- Orders --
 @app.get("/orders", tags=["Orders"])
 def get_orders(limit: int = 50, offset: int = 0):
     """
     Paginated list of all cleaned orders.
-    - **limit**: number of records to return (default 50, max 590)
-    - **offset**: starting index
     """
     orders = _require("orders")
     return {
@@ -129,28 +118,28 @@ def get_orders(limit: int = 50, offset: int = 0):
     }
 
 
-# ── Fraud ─────────────────────────────────────────────────────────────────────
+# -- Fraud --
 @app.get("/fraud", tags=["Fraud"])
 def get_fraud_orders():
     """All flagged fraud orders with order ID, product, region, revenue, and date."""
     return _require("fraud_orders")
 
 
-# ── Inventory ─────────────────────────────────────────────────────────────────
+# -- Inventory --
 @app.get("/inventory", tags=["Inventory"])
 def get_inventory_priority():
     """Min-heap inventory restock priority list (lowest score = restock first)."""
     return _require("inventory_priority")
 
 
-# ── Heatmap ───────────────────────────────────────────────────────────────────
+# -- Heatmap --
 @app.get("/heatmap", tags=["Analytics"])
 def get_heatmap():
     """Average revenue heatmap: product × hour-bin (0-8, 9-16, 17-23)."""
     return _require("heatmap")
 
 
-# ── AI Insights ───────────────────────────────────────────────────────────────
+# -- AI Insights --
 @app.get("/insights", tags=["AI Insights"])
 def get_insights():
     """Rule-based AI business insights generated from the cleaned ETL data."""

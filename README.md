@@ -12,11 +12,21 @@ This project is an end-to-end data intelligence and analysis system designed for
 
 ## Project Structure
 
-The project consists of the following key components:
-- `solution.py`: The entry point for the ETL pipeline, min-heap builder, dashboard generation, and regional map construction.
-- `api.py`: The FastAPI application exposing endpoints for the processed e-commerce datasets.
-- `salesiq-dashboard.html`: Front-end web dashboard that visualizes backend data.
-- `dashboard_data.json` / `dashboard_data.js`: The serialized data payloads output by the ETL process.
+The project is organized as follows:
+- `src/pipeline/`: Contains modular Python files for the data pipeline:
+  - `config.py`: Global constants, output configurations, and target directory resolution.
+  - `etl.py`: Task 1: raw data generation and `ETLPipeline` processing.
+  - `heap.py`: Task 2: custom binary `MinHeap` implementation and scoring.
+  - `visualization.py`: Task 3: Matplotlib 3-panel dashboard generation.
+  - `mapping.py`: Task 4: Folium regional sales geospatial map builder.
+- `src/run_pipeline.py`: Pipeline entrypoint to orchestrate processing tasks.
+- `src/api/main.py`: FastAPI server containing the REST endpoints.
+- `frontend/`:
+  - `index.html`: Web interface dashboard.
+  - `dashboard_data.json` / `dashboard_data.js`: Serialized data payloads.
+  - `sales_dashboard.png`: Matplotlib dashboard output plot.
+  - `regional_sales_map.html`: Folium map page.
+- `data/`: Folder storing general csv data outputs.
 - `requirements.txt`: Python package requirements.
 
 ## Setup and Installation
@@ -36,22 +46,22 @@ pip install -r requirements.txt
 ### 1. Execute the ETL Pipeline and Analysis
 To process raw data and generate updated dashboards and maps, run:
 ```bash
-python solution.py
+python -m src.run_pipeline
 ```
-This script performs the full analysis workflow and writes data output files, including `cleaned_orders.csv`, `product_summary.csv`, `sales_dashboard.png`, `regional_sales_map.html`, and `dashboard_data.json`.
+This script performs the full analysis workflow and writes data output files directly into the `data/` and `frontend/` directories.
 
 ### 2. Launch the API Backend Server
 To start the FastAPI backend server on local port 8000:
 ```bash
-python -m uvicorn api:app --reload
+python -m uvicorn src.api.main:app --reload
 ```
 Once started, you can access the interactive API documentation at:
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - Redoc UI: `http://127.0.0.1:8000/redoc`
 
 ### 3. Open the Frontend Dashboard
-Open `salesiq-dashboard.html` directly in your web browser. Alternatively, you can serve the directory using a lightweight HTTP server:
+Open `frontend/index.html` directly in your web browser. Alternatively, you can serve the directory using a lightweight HTTP server:
 ```bash
-python -m http.server 8080
+python -m http.server -d frontend 8080
 ```
-Then navigate to `http://127.0.0.1:8080/salesiq-dashboard.html` in your web browser.
+Then navigate to `http://127.0.0.1:8080/index.html` in your web browser.
